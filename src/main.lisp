@@ -35,7 +35,7 @@ Handles alists, plists, and hashes, (but doesn't check for well-formedness)."
   "Like mget, but takes a series of keys for dealing with nested mappings.
 The first key corresponds to the outermost layer of mapping."
   (if (cdr keys)
-      (apply #'Mget* (mget mapping (car keys)) (cdr keys))
+      (apply #'mget* (mget mapping (car keys)) (cdr keys))
       (mget mapping (car keys))))
 
 (defun println (s)
