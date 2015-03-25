@@ -44,6 +44,13 @@ The first key corresponds to the outermost layer of mapping."
   (terpri))
 
 (defmacro -> (first &body rest)
+  "Clojure-style threading macro.  Evaluate the first form insert into the
+position of the first argument of the second form and repeat while forms
+remain.
+
+If one of the arguments is a function name and not a list, the function is
+called with the inserted value as the only argument.
+"
   (if rest
       (if (listp (car rest))
           ;; Insert first into the first argument position
