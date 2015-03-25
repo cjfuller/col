@@ -2,12 +2,12 @@
 
 (defpackage :cjf-stdlib
   (:use :cl)
-  (:export :mget :mget* :println)
+  (:export :mget :mget* :println :->)
   )
 
 (defpackage :cjf-stdlib-test
   (:use :cl :cjf-stdlib)
-  (:export :mget-test :mget*-test))
+  (:export :mget-test :mget*-test :threading-test))
 
 (in-package :cjf-stdlib)
 
@@ -43,6 +43,17 @@ The first key corresponds to the outermost layer of mapping."
   (princ s)
   (terpri))
 
+(defmacro -> (first &body rest)
+  (if rest
+      (if (listp (car rest))
+          ;; Insert first into the first argument position
+          (let ((fn-name (caar rest))
+                (args (cdar rest)))
+            `(-> (,fn-name ,first ,@args) ,@(cdr rest)))
+          ;; Just call the function on first
+          `(-> (,(car rest) ,first) ,@(cdr rest)))
+      first))
+
 (in-package :cjf-stdlib-test)
 
 (defun mget-test ()
@@ -60,3 +71,13 @@ The first key corresponds to the outermost layer of mapping."
 (defun mget*-test ()
   (let ((test-obj '(:test0 ((:i0test0 . "v")))))
     (assert (equal (mget* test-obj :test0 :i0test0) "v"))))
+
+(defun helper-a (str)
+  (concatenate 'string str "a"))
+(defun helper-b (str str1)
+  (concatenate 'string str "b" str1))
+(defun helper-c (str)
+  (concatenate 'string str "c"))
+
+(defun threading-test ()
+  (assert (equal (-> "" helper-a (helper-b "x") helper-c) "abxc")))
