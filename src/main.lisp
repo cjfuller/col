@@ -23,13 +23,16 @@ of an alist, plist, or hash."
   (and (listp mapping)
        (symbolp (car mapping))))
 
+;; TODO: probably should use generic functions
 (defun mget (mapping key)
   "Get the value assocated with the given key from the given mapping.
-Handles alists, plists, and hashes, (but doesn't check for well-formedness)."
+Handles alists, plists, standard objects, and hashes (but doesn't check for well-formedness)."
   (cond
     ((alist-p mapping) (cdr (assoc key mapping)))
     ((plist-p mapping) (getf mapping key))
-    (t (gethash key mapping))))
+    ((hash-table-p mapping) (gethash key mapping))
+    (t (slot-value mapping key))
+    ))
 
 (defun mget* (mapping &rest keys)
   "Like mget, but takes a series of keys for dealing with nested mappings.
@@ -63,17 +66,27 @@ called with the inserted value as the only argument.
 
 (in-package :cjf-stdlib-test)
 
+(defclass test-obj-with-slots ()
+  ((test0 :initarg :test0)
+   (test1 :initarg :test1)
+   (test2 :initarg :test2)))
+
 (defun mget-test ()
   (let ((pl-test '(:test0 "v0" :test1 "v1" :test2 "v2"))
         (al-test '((:test0 . "v0") (:test1 . "v1") (:test2 . "v2")))
-        (h-test (make-hash-table)))
+        (h-test (make-hash-table))
+        (obj-test (make-instance 'test-obj-with-slots
+                                 :test0 "v0"
+                                 :test1 "v1"
+                                 :test2 "v2")))
     (setf (gethash :test0 h-test) "v0")
     (setf (gethash :test1 h-test) "v1")
     (setf (gethash :test2 h-test) "v2")
 
     (assert (equal (mget pl-test :test1) "v1"))
     (assert (equal (mget al-test :test1) "v1"))
-    (assert (equal (mget h-test :test1) "v1"))))
+    (assert (equal (mget h-test :test1) "v1"))
+    (assert (equal (mget obj-test 'test1) "v1"))))
 
 (defun mget*-test ()
   (let ((test-obj '(:test0 ((:i0test0 . "v")))))
