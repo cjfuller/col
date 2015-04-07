@@ -2,7 +2,7 @@
 
 (defpackage :cjf-stdlib
   (:use :cl)
-  (:export :mget :mget* :println :->)
+  (:export :mget :mget* :println :-> :->string)
   )
 
 (defpackage :cjf-stdlib-test
@@ -41,9 +41,19 @@ The first key corresponds to the outermost layer of mapping."
       (apply #'mget* (mget mapping (car keys)) (cdr keys))
       (mget mapping (car keys))))
 
+(defgeneric ->string (obj)
+  (:documentation "Convert an object to a string."))
+
+(defmethod ->string (obj)
+  obj)
+
 (defun println (s)
-  "Princ, followed by a newline."
-  (princ s)
+  "Princ, followed by a newline.
+
+Calls ->string on the object passed in.  (Default implementation is the
+identity function.)
+"
+  (princ (->string s))
   (terpri))
 
 (defmacro -> (first &body rest)
