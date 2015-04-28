@@ -2,7 +2,7 @@
 
 (defpackage :cjf-stdlib
   (:use :cl)
-  (:export :mget :mget* :println :-> :->string)
+  (:export :mget :mget* :println :-> :->string :keys :ht)
   )
 
 (defpackage :cjf-stdlib-test
@@ -74,6 +74,22 @@ called with the inserted value as the only argument.
           `(-> (,(car rest) ,first) ,@(cdr rest)))
       first))
 
+(defgeneric keys (obj)
+  (:documentation "Get the keys from a mapping (alist, plist, or hash table)."))
+
+(defmethod keys ((h hash-table))
+  (loop for key being the hash-keys of h collect key))
+
+(defmethod keys ((l list))
+  (if (alist-p l)
+      (mapcar #'car l)
+      (loop for i in l by #'cddr collect i)))
+
+(defun ht (&rest plist)
+  (let ((h (make-hash-table)))
+    (mapc (lambda (k) (setf (gethash k h) (mget plist k))) (keys plist))
+    h))
+
 (in-package :cjf-stdlib-test)
 
 (defclass test-obj-with-slots ()
@@ -111,3 +127,22 @@ called with the inserted value as the only argument.
 
 (defun threading-test ()
   (assert (equal (-> "" helper-a (helper-b "x") helper-c) "abxc")))
+
+(defun keys-test ()
+    (let ((pl-test '(:test0 "v0" :test1 "v1" :test2 "v2"))
+          (al-test '((:test0 . "v0") (:test1 . "v1") (:test2 . "v2")))
+          (h-test (make-hash-table))
+          (expected '(:test0 :test1 :test2)))
+      (setf (gethash :test0 h-test) "v0")
+      (setf (gethash :test1 h-test) "v1")
+      (setf (gethash :test2 h-test) "v2")
+
+      (assert (equal (keys pl-test) expected))
+      (assert (equal (keys al-test) expected))
+      (assert (equal (keys h-test) expected))))
+
+(defun ht-test ()
+  (let ((h (ht :a 1 :b 2 :c 3)))
+    (assert (equal (type-of h) 'hash-table))
+    (assert (equal (keys h) '(:a :b :c)))
+    (assert (equal (mget h :b) 2))))
