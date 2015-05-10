@@ -2,12 +2,12 @@
 
 (defpackage :cjf-stdlib
   (:use :cl)
-  (:export :mget :mget* :println :-> :->string :keys :ht)
+  (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset)
   )
 
 (defpackage :cjf-stdlib-test
   (:use :cl :cjf-stdlib)
-  (:export :mget-test :mget*-test :threading-test))
+  (:export :mget-test :mget*-test :threading-test :plist->alist-test :hset-test))
 
 (in-package :cjf-stdlib)
 
@@ -40,6 +40,10 @@ The first key corresponds to the outermost layer of mapping."
   (if (cdr keys)
       (apply #'mget* (mget mapping (car keys)) (cdr keys))
       (mget mapping (car keys))))
+
+(defun hset (hash key value)
+  "A slightly more convenient shorthand for setting values in a hash table."
+  (setf (gethash key hash) value))
 
 (defgeneric ->string (obj)
   (:documentation "Convert an object to a string."))
@@ -89,6 +93,11 @@ called with the inserted value as the only argument.
   (let ((h (make-hash-table)))
     (mapc (lambda (k) (setf (gethash k h) (mget plist k))) (keys plist))
     h))
+
+(defun plist->alist (plist)
+  (loop for x in plist by #'cddr
+        for y in (cdr plist) by #'cddr
+        collect (cons x y)))
 
 (in-package :cjf-stdlib-test)
 
@@ -146,3 +155,12 @@ called with the inserted value as the only argument.
     (assert (equal (type-of h) 'hash-table))
     (assert (equal (keys h) '(:a :b :c)))
     (assert (equal (mget h :b) 2))))
+
+(defun plist->alist-test ()
+  (let ((lst '(1 2 3 4)))
+    (assert (equal (plist->alist lst) '((1 . 2) (3 . 4))))))
+
+(defun hset-test ()
+  (let ((h (make-hash-table)))
+    (hset h :test 'val)
+    (assert (equal (mget h :test) 'val))))
