@@ -28,7 +28,7 @@ of an alist, plist, or hash."
   "Get the value assocated with the given key from the given mapping.
 Handles alists, plists, standard objects, and hashes (but doesn't check for well-formedness)."
   (cond
-    ((alist-p mapping) (cdr (assoc key mapping)))
+    ((alist-p mapping) (cdr (assoc key mapping :test #'equal)))
     ((plist-p mapping) (getf mapping key))
     ((hash-table-p mapping) (gethash key mapping))
     (t (slot-value mapping key))
