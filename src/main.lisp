@@ -78,6 +78,10 @@ called with the inserted value as the only argument.
           `(-> (,(car rest) ,first) ,@(cdr rest)))
       first))
 
+(defmacro rmapcar (lst fn)
+  "Mapcar with arguments reversed.  Allows use with threading macro."
+  `(mapcar ,fn ,lst))
+
 (defgeneric keys (obj)
   (:documentation "Get the keys from a mapping (alist, plist, or hash table)."))
 
@@ -98,6 +102,14 @@ called with the inserted value as the only argument.
   (loop for x in plist by #'cddr
         for y in (cdr plist) by #'cddr
         collect (cons x y)))
+
+(defun shell-command-reader (stream char arg)
+  (let ((str (cl-interpol::interpol-reader stream char arg)))
+    `(inferior-shell:run/ss ,str)))
+
+;; TODO: make this enableable
+(set-dispatch-macro-character #\# #\! #'shell-command-reader)
+
 
 (in-package :cjf-stdlib-test)
 
