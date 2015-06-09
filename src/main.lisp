@@ -1,9 +1,12 @@
 (in-package :cl-user)
 
 (defpackage :cjf-stdlib
-  (:use :cl)
-  (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset)
-  )
+  (:use :cl :split-sequence)
+  (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset
+   :slurp :alist->ht :<- :mset!
+   ; re-export from split-sequence
+   :split-sequence :split-sequence-if :split-sequence-if-not
+   ))
 
 (defpackage :cjf-stdlib-test
   (:use :cl :cjf-stdlib)
@@ -44,6 +47,20 @@ The first key corresponds to the outermost layer of mapping."
 (defun hset (hash key value)
   "A slightly more convenient shorthand for setting values in a hash table."
   (setf (gethash key hash) value))
+
+(defgeneric mset! (obj key value)
+  (:documentation "Set the value associated with a key in a mapping in-place."))
+
+(defmethod mset! ((obj hash-table) key value)
+  (hset h key value))
+
+(defmethod mset! ((obj list) key value)
+  ;; Fail if it's not an alist
+  (unless (listp (car obj))
+    (error "Can only use mset! on alists."))
+  (if (assoc key obj)
+      (setf (cdr (assoc key obj)) value)
+      (nconc obj (list (cons key value)))))
 
 (defgeneric ->string (obj)
   (:documentation "Convert an object to a string."))
@@ -93,6 +110,7 @@ called with the inserted value as the only argument.
       (mapcar #'car l)
       (loop for i in l by #'cddr collect i)))
 
+;; TODO: equality test, etc.
 (defun ht (&rest plist)
   (let ((h (make-hash-table)))
     (mapc (lambda (k) (setf (gethash k h) (mget plist k))) (keys plist))
@@ -103,6 +121,12 @@ called with the inserted value as the only argument.
         for y in (cdr plist) by #'cddr
         collect (cons x y)))
 
+(defun alist->ht (alist &key (test #'eql))
+  (let ((h (make-hash-table :test test)))
+    (loop for pair in alist
+          do (hset h (car pair) (cdr pair)))
+    h))
+
 (defun shell-command-reader (stream char arg)
   (let ((str (cl-interpol::interpol-reader stream char arg)))
     `(inferior-shell:run/ss ,str)))
@@ -110,6 +134,18 @@ called with the inserted value as the only argument.
 ;; TODO: make this enableable
 (set-dispatch-macro-character #\# #\! #'shell-command-reader)
 
+(defun slurp (fn &key (lines nil))
+  "Slurp a file into a strng.
+
+If lines is non-nil, return a list, one string per line (newlines stripped)."
+  (with-open-file (f fn)
+    (if lines
+        (uiop:slurp-stream-lines f)
+        (uiop:slurp-stream-string f))))
+
+(defmacro <- (var val &body body)
+  `(let ((,var ,val))
+     ,@body))
 
 (in-package :cjf-stdlib-test)
 

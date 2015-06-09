@@ -2,7 +2,7 @@
   :description "Personal standard library."
   :version "0.0.1"
   :license "MIT"
-  :depends-on (:cl-interpol :inferior-shell)
+  :depends-on (:cl-interpol :inferior-shell :split-sequence)
   :components
   ((:module "src"
     :components
