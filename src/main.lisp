@@ -3,14 +3,10 @@
 (defpackage :cjf-stdlib
   (:use :cl :split-sequence)
   (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset
-   :slurp :alist->ht :<- :mset!
+   :slurp :alist->ht :<- :mset! :remove-from-plist
    ; re-export from split-sequence
    :split-sequence :split-sequence-if :split-sequence-if-not
    ))
-
-(defpackage :cjf-stdlib-test
-  (:use :cl :cjf-stdlib)
-  (:export :mget-test :mget*-test :threading-test :plist->alist-test :hset-test))
 
 (in-package :cjf-stdlib)
 
@@ -25,6 +21,15 @@ of an alist, plist, or hash."
 of an alist, plist, or hash."
   (and (listp mapping)
        (symbolp (car mapping))))
+
+(defun remove-from-plist (plist k)
+  "Return a new plist with the specified key and its value removed."
+  (loop for x in plist by #'cddr
+        for y in (cdr plist) by #'cddr
+        unless (eql k x)
+          collect x
+        unless (eql k x)
+          collect y))
 
 ;; TODO: probably should use generic functions
 (defun mget (mapping key)
@@ -121,11 +126,65 @@ called with the inserted value as the only argument.
         for y in (cdr plist) by #'cddr
         collect (cons x y)))
 
-(defun alist->ht (alist &key (test #'eql))
-  (let ((h (make-hash-table :test test)))
-    (loop for pair in alist
-          do (hset h (car pair) (cdr pair)))
-    h))
+(defun alist->ht (alist &rest hash-table-initargs)
+  (apply #'alexandria:alist-hash-table (cons alist hash-table-initargs)))
+
+(defun read-terminal-bracket (stream char)
+  "Temporary reader for terminal bracket while reading a map literal.
+
+This just pushes the bracket back on the stream and returns nothing, allowing
+the map-elements-reader to handle the character.  (We just don't want the
+regular reader to handle it.)
+
+This ensures that things like:
+#M{:hello :world}
+don't try to read the closing bracket as part of the second keyword.
+
+(Note that things like #M{:hello :|bracketed}world|} will still work.)
+"
+  (unread-char char stream)
+  (values))
+
+(defun map-elements-reader (stream &optional (acc nil))
+    (case (peek-char t stream)
+      (#\{ (read-char stream) (map-elements-reader stream acc))
+      (#\} (read-char stream) (reverse acc))
+      (otherwise
+         (let ((*readtable* (copy-readtable *readtable*)))
+           (set-macro-character #\} #'read-terminal-bracket)
+           (map-elements-reader stream (cons (read stream t nil t) acc))))))
+
+(defun map-literal-reader (stream char arg)
+  "A map literal looks like #M(opts plist [optional]){key value key value}.
+
+Currently defaults to returning a hash table with test #'equal.  This will
+change in the future.
+
+Examples:
+#M{:hello :world}
+"
+  (declare (ignore char))
+  ; Next character could be a ( in which case we want to read options
+  ; or a { in which case we want to read the elements
+  (let ((opts nil)
+        (elts nil)
+        (next-char (peek-char nil stream)))
+    (when (eq next-char #\()
+      (setq opts (read stream t nil t)))
+    ;; set up some default opts
+    (unless (member :test opts)
+      (setq opts (cons :test (cons '(function equal) opts))))
+    ;; TODO: this is going to be inefficient-- accumulating elements into a
+    ;; list, then reaccumulating them into whatever output structure was
+    ;; requested.  Pass a flag so that we can construct the correct
+    ;; representation directly.
+    (setq elts (map-elements-reader stream))
+    ;; TODO: implement opts for what type of object to return
+    ;; NOTE: in the future, a functional immutable map will be the default
+    `(apply #'alexandria:plist-hash-table (cons (list ,@elts) (list ,@opts)))))
+
+;; TODO: make this enableable
+(set-dispatch-macro-character #\# #\M #'map-literal-reader)
 
 (defun shell-command-reader (stream char arg)
   (let ((str (cl-interpol::interpol-reader stream char arg)))
@@ -143,72 +202,7 @@ If lines is non-nil, return a list, one string per line (newlines stripped)."
         (uiop:slurp-stream-lines f)
         (uiop:slurp-stream-string f))))
 
-(defmacro <- (var val &body body)
+(defmacro := (var val &body body)
+  "Shorthand for let for a single binding."
   `(let ((,var ,val))
      ,@body))
-
-(in-package :cjf-stdlib-test)
-
-(defclass test-obj-with-slots ()
-  ((test0 :initarg :test0)
-   (test1 :initarg :test1)
-   (test2 :initarg :test2)))
-
-(defun mget-test ()
-  (let ((pl-test '(:test0 "v0" :test1 "v1" :test2 "v2"))
-        (al-test '((:test0 . "v0") (:test1 . "v1") (:test2 . "v2")))
-        (h-test (make-hash-table))
-        (obj-test (make-instance 'test-obj-with-slots
-                                 :test0 "v0"
-                                 :test1 "v1"
-                                 :test2 "v2")))
-    (setf (gethash :test0 h-test) "v0")
-    (setf (gethash :test1 h-test) "v1")
-    (setf (gethash :test2 h-test) "v2")
-
-    (assert (equal (mget pl-test :test1) "v1"))
-    (assert (equal (mget al-test :test1) "v1"))
-    (assert (equal (mget h-test :test1) "v1"))
-    (assert (equal (mget obj-test 'test1) "v1"))))
-
-(defun mget*-test ()
-  (let ((test-obj '(:test0 ((:i0test0 . "v")))))
-    (assert (equal (mget* test-obj :test0 :i0test0) "v"))))
-
-(defun helper-a (str)
-  (concatenate 'string str "a"))
-(defun helper-b (str str1)
-  (concatenate 'string str "b" str1))
-(defun helper-c (str)
-  (concatenate 'string str "c"))
-
-(defun threading-test ()
-  (assert (equal (-> "" helper-a (helper-b "x") helper-c) "abxc")))
-
-(defun keys-test ()
-    (let ((pl-test '(:test0 "v0" :test1 "v1" :test2 "v2"))
-          (al-test '((:test0 . "v0") (:test1 . "v1") (:test2 . "v2")))
-          (h-test (make-hash-table))
-          (expected '(:test0 :test1 :test2)))
-      (setf (gethash :test0 h-test) "v0")
-      (setf (gethash :test1 h-test) "v1")
-      (setf (gethash :test2 h-test) "v2")
-
-      (assert (equal (keys pl-test) expected))
-      (assert (equal (keys al-test) expected))
-      (assert (equal (keys h-test) expected))))
-
-(defun ht-test ()
-  (let ((h (ht :a 1 :b 2 :c 3)))
-    (assert (equal (type-of h) 'hash-table))
-    (assert (equal (keys h) '(:a :b :c)))
-    (assert (equal (mget h :b) 2))))
-
-(defun plist->alist-test ()
-  (let ((lst '(1 2 3 4)))
-    (assert (equal (plist->alist lst) '((1 . 2) (3 . 4))))))
-
-(defun hset-test ()
-  (let ((h (make-hash-table)))
-    (hset h :test 'val)
-    (assert (equal (mget h :test) 'val))))
