@@ -83,3 +83,9 @@
   (assert (equal (mget #M(:test #'eql){:hello "world"} :hello) "world"))
   (assert (equal (mget #M(:test #'eql){(list "hello") "world"} '("hello")) nil))
   (assert (equal (mget #M{(list "hello") "world"} '("hello")) "world")))
+
+(defun mset-test ()
+  (:= test-fn (lambda (m) (assert (equal (mget (mset m :hello "mars") :hello) "mars")))
+    (funcall test-fn #M{:hello "world" :goodnight "moon"})
+    (funcall test-fn '(:hello "world" :goodnight "moon"))
+    (funcall test-fn '((:hello . "world") (:goodnight ."moon")))))

@@ -3,7 +3,7 @@
 (defpackage :cjf-stdlib
   (:use :cl :split-sequence)
   (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset
-   :slurp :alist->ht :<- :mset! :remove-from-plist
+   :slurp :alist->ht :<- :mset! :remove-from-plist :mset
    ; re-export from split-sequence
    :split-sequence :split-sequence-if :split-sequence-if-not
    ))
@@ -56,6 +56,18 @@ The first key corresponds to the outermost layer of mapping."
   "A slightly more convenient shorthand for setting values in a hash table."
   (setf (gethash key hash) value))
 
+(defun htcopy (hash)
+  "Copy a hash table."
+  (:= newhash (make-hash-table
+               :test (hash-table-test hash)
+               :size (hash-table-size hash)
+               :rehash-size (hash-table-rehash-size hash)
+               :rehash-threshold (hash-table-rehash-threshold hash))
+    (loop for key being the hash-keys of hash
+            using (hash-value value)
+          do (hset newhash key value))
+    newhash))
+
 (defgeneric mset! (obj key value)
   (:documentation "Set the value associated with a key in a mapping in-place."))
 
@@ -69,6 +81,19 @@ The first key corresponds to the outermost layer of mapping."
   (if (assoc key obj)
       (setf (cdr (assoc key obj)) value)
       (nconc obj (list (cons key value)))))
+
+(defmethod mset (obj key value)
+  (:documentation "Return a mapping with value associated with key.  Don't modify the original mapping."))
+
+(defmethod mset ((obj list) key value)
+  (if (alist-p obj)
+      (acons key value obj)
+      (cons key (cons value obj))))
+
+(defmethod mset ((obj hash-table) key value)
+  (:= newtable (htcopy obj)
+    (hset newtable key value)
+    newtable))
 
 (defgeneric ->string (obj)
   (:documentation "Convert an object to a string."))
