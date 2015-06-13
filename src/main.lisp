@@ -31,16 +31,19 @@ of an alist, plist, or hash."
         unless (eql k x)
           collect y))
 
-;; TODO: probably should use generic functions
-(defun mget (mapping key)
-  "Get the value assocated with the given key from the given mapping.
-Handles alists, plists, standard objects, and hashes (but doesn't check for well-formedness)."
-  (cond
-    ((alist-p mapping) (cdr (assoc key mapping :test #'equal)))
-    ((plist-p mapping) (getf mapping key))
-    ((hash-table-p mapping) (gethash key mapping))
-    (t (slot-value mapping key))
-    ))
+(defgeneric mget (mapping key)
+  (:documentation "Get the value associated with a key in a mapping."))
+
+(defmethod mget ((mapping list) key)
+  (if (alist-p mapping)
+      (cdr (assoc key mapping :test #'equal))
+      (getf mapping key)))
+
+(defmethod mget ((mapping hash-table) key)
+  (gethash key mapping))
+
+(defmethod mget (mapping key)
+  (slot-value mapping key))
 
 (defun mget* (mapping &rest keys)
   "Like mget, but takes a series of keys for dealing with nested mappings.
