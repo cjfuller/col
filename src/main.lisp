@@ -3,7 +3,7 @@
 (defpackage :cjf-stdlib
   (:use :cl :split-sequence)
   (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset
-   :slurp :alist->ht :<- :mset! :remove-from-plist :mset
+   :slurp :alist->ht :<- :mset! :remove-from-plist :mset :<> :tee :rmapcar :tap
    ; re-export from split-sequence
    :split-sequence :split-sequence-if :split-sequence-if-not
    ))
@@ -82,7 +82,7 @@ The first key corresponds to the outermost layer of mapping."
       (setf (cdr (assoc key obj)) value)
       (nconc obj (list (cons key value)))))
 
-(defmethod mset (obj key value)
+(defgeneric mset (obj key value)
   (:documentation "Return a mapping with value associated with key.  Don't modify the original mapping."))
 
 (defmethod mset ((obj list) key value)
@@ -127,6 +127,20 @@ called with the inserted value as the only argument.
           ;; Just call the function on first
           `(-> (,(car rest) ,first) ,@(cdr rest)))
       first))
+
+(defmacro tee (first &body rest)
+  "Tee for the threading macro.  Insert first into the first position in each
+of the body forms, then collect the results as a list."
+  `(list ,@(mapcar (lambda (form)
+                     `(-> ,first ,form))
+                   rest)))
+
+(defmacro tap (first form)
+  "Tap for the threading macro.  Insert first into the first position in form,
+then return first."
+  `(progn
+     (-> ,first ,form)
+     ,first))
 
 (defmacro rmapcar (lst fn)
   "Mapcar with arguments reversed.  Allows use with threading macro."
@@ -196,12 +210,20 @@ Examples:
   ; or a { in which case we want to read the elements
   (let ((opts nil)
         (elts nil)
+        (output-type :hash-table)
         (next-char (peek-char nil stream)))
     (when (eq next-char #\()
       (setq opts (read stream t nil t)))
     ;; set up some default opts
     (unless (member :test opts)
       (setq opts (cons :test (cons '(function equal) opts))))
+
+    ;; pull out reader opts that apply to this function instead of the
+    ;; downstream options for the data structure
+    (when (member :type opts)
+      (setq output-type (mget opts :type))
+      (setq opts (remove-from-plist opts :type)))
+
     ;; TODO: this is going to be inefficient-- accumulating elements into a
     ;; list, then reaccumulating them into whatever output structure was
     ;; requested.  Pass a flag so that we can construct the correct
@@ -209,7 +231,10 @@ Examples:
     (setq elts (map-elements-reader stream))
     ;; TODO: implement opts for what type of object to return
     ;; NOTE: in the future, a functional immutable map will be the default
-    `(apply #'alexandria:plist-hash-table (cons (list ,@elts) (list ,@opts)))))
+    (case output-type
+      (:hash-table `(apply #'alexandria:plist-hash-table (cons (list ,@elts) (list ,@opts))))
+      (:alist `(plist->alist (list ,@elts)))
+      (:plist `(list ,@elts)))))
 
 ;; TODO: make this enableable
 (set-dispatch-macro-character #\# #\M #'map-literal-reader)
@@ -234,3 +259,7 @@ If lines is non-nil, return a list, one string per line (newlines stripped)."
   "Shorthand for let for a single binding."
   `(let ((,var ,val))
      ,@body))
+
+(defun <> (&rest strings)
+  "Shorthand for concatenating strings."
+  (apply #'concatenate (cons 'string strings)))
