@@ -93,7 +93,7 @@ The first key corresponds to the outermost layer of mapping."
       (cons key (cons value obj))))
 
 (defmethod mset ((obj hash-table) key value)
-  (:= newtable (htcopy obj)
+  (let ((newtable (htcopy obj)))
     (hset newtable key value)
     newtable))
 
