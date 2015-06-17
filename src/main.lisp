@@ -4,6 +4,7 @@
   (:use :cl :split-sequence)
   (:export :mget :mget* :println :-> :->string :keys :ht :plist->alist :hset
    :slurp :alist->ht :<- :mset! :remove-from-plist :mset :<> :tee :rmapcar :tap
+   :mset*
    ; re-export from split-sequence
    :split-sequence :split-sequence-if :split-sequence-if-not
    ))
@@ -82,6 +83,7 @@ The first key corresponds to the outermost layer of mapping."
       (setf (cdr (assoc key obj)) value)
       (nconc obj (list (cons key value)))))
 
+
 (defgeneric mset (obj key value)
   (:documentation "Return a mapping with value associated with key.  Don't modify the original mapping."))
 
@@ -94,6 +96,19 @@ The first key corresponds to the outermost layer of mapping."
   (:= newtable (htcopy obj)
     (hset newtable key value)
     newtable))
+
+(defun mset* (obj keylist value)
+  "Return a mapping where the value at the keys described by
+  keylist is set to values.  Don't modify any of the nested mappings.
+
+  If any of the keys are missing or have a nil value, a nested mapping (an
+  alist by default, may change in the future) is inserted so that the final
+  object has the full series of keys pointing to the value.
+"
+  (if (cdr keylist)
+      (mset obj (car keylist)
+            (mset* (mget obj (car keylist)) (cdr keylist) value))
+      (mset obj (car keylist) value)))
 
 (defgeneric ->string (obj)
   (:documentation "Convert an object to a string."))
