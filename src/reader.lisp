@@ -45,8 +45,7 @@ don't try to read the closing bracket as part of the second keyword.
 (defun map-literal-reader (stream char arg)
   "A map literal looks like #M(opts plist [optional]){key value key value}.
 
-Currently defaults to returning a hash table with test #'equal.  This will
-change in the future.
+Defaults to returning an fset map.
 
 Examples:
 #M{:hello :world}
@@ -56,7 +55,7 @@ Examples:
   ; or a { in which case we want to read the elements
   (let ((opts nil)
         (elts nil)
-        (output-type :hash-table)
+        (output-type :fset-map)
         (next-char (peek-char nil stream)))
     (when (eq next-char #\()
       (setq opts (read stream t nil t)))
@@ -70,15 +69,15 @@ Examples:
       (setq output-type (mget opts :type))
       (setq opts (remove-from-plist opts :type)))
 
-    ;; TODO: this is going to be inefficient-- accumulating elements into a
-    ;; list, then reaccumulating them into whatever output structure was
-    ;; requested.  Pass a flag so that we can construct the correct
-    ;; representation directly.
+    ;; TODO: this is inefficient-- accumulating elements into a list, then
+    ;; reaccumulating them into whatever output structure was requested.
+    ;; Construct the correct representation directly instead.
     (setq elts (map-elements-reader stream))
-    ;; TODO: implement opts for what type of object to return
-    ;; NOTE: in the future, a functional immutable map will be the default
     (case output-type
       (:hash-table `(apply #'alexandria:plist-hash-table (cons (list ,@elts) (list ,@opts))))
+      (:fset-map `(fset:map ,@(loop for k in elts by #'cddr
+                                    for v in (cdr elts) by #'cddr
+                                    collect (list k v))))
       (:alist `(plist->alist (list ,@elts)))
       (:plist `(list ,@elts)))))
 

@@ -54,6 +54,9 @@ of an alist, plist, or hash."
 (defmethod mget ((mapping hash-table) key)
   (gethash key mapping))
 
+(defmethod mget ((mapping fset:map) key)
+  (fset:lookup mapping key))
+
 (defmethod mget (mapping key)
   (slot-value mapping key))
 
@@ -94,6 +97,8 @@ The first key corresponds to the outermost layer of mapping."
       (setf (cdr (assoc key obj)) value)
       (nconc obj (list (cons key value)))))
 
+(defmethod mset! ((obj fset:map) key value)
+  (error "FSet maps are immutable."))
 
 (defgeneric mset (obj key value)
   (:documentation "Return a mapping with value associated with key.  Don't modify the original mapping."))
@@ -107,6 +112,9 @@ The first key corresponds to the outermost layer of mapping."
   (let ((newtable (htcopy obj)))
     (hset newtable key value)
     newtable))
+
+(defmethod mset ((obj fset:map) key value)
+  (fset:with obj key value))
 
 (defun mset* (obj keylist value)
   "Return a mapping where the value at the keys described by
@@ -136,6 +144,9 @@ The first key corresponds to the outermost layer of mapping."
   (if (alist-p l)
       (mapcar #'car l)
       (loop for i in l by #'cddr collect i)))
+
+(defmethod keys ((m fset:map))
+  (fset:domain m))
 
 ;; TODO: equality test, etc.
 (defun ht (&rest plist)

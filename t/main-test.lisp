@@ -21,6 +21,7 @@
   (let ((pl-test '(:test0 "v0" :test1 "v1" :test2 "v2"))
         (al-test '((:test0 . "v0") (:test1 . "v1") (:test2 . "v2")))
         (h-test (make-hash-table))
+        (fm-test (fset:map (:test0 "v0") (:test1 "v1") (:test2 "v2")))
         (obj-test (make-instance 'test-obj-with-slots
                                  :test0 "v0"
                                  :test1 "v1"
@@ -32,7 +33,8 @@
     (is (equal (mget pl-test :test1) "v1"))
     (is (equal (mget al-test :test1) "v1"))
     (is (equal (mget h-test :test1) "v1"))
-    (is (equal (mget obj-test 'test1) "v1"))))
+    (is (equal (mget obj-test 'test1) "v1"))
+    (is (equal (mget fm-test :test1) "v1"))))
 
 (test mget*-test
   (let ((test-obj '(:test0 ((:i0test0 . "v")))))
@@ -82,14 +84,15 @@
   (is (equal (mget #M{:hello "world"} :hello) "world"))
   (is (equal (mget #M{:hello :world} :hello) :world))
   (is (equal (mget* #M{:hello #M{:world "earth"}} :hello :world) "earth"))
-  (is (equal (mget #M(:test #'eql){:hello "world"} :hello) "world"))
-  (is (equal (mget #M(:test #'eql){(list "hello") "world"} '("hello")) nil))
-  (is (equal (mget #M{(list "hello") "world"} '("hello")) "world")))
+  (is (equal (mget #M(:type :hash-table :test #'eql){:hello "world"} :hello) "world"))
+  (is (equal (mget #M(:type :hash-table :test #'eql){(list "hello") "world"} '("hello")) nil))
+  (is (equal (mget #M(:type :hash-table){(list "hello") "world"} '("hello")) "world")))
 
 (test mset-test
   (:= test-fn (lambda (m) (is (equal (mget (mset m :hello "mars") :hello) "mars")))
     (funcall test-fn #M{:hello "world" :goodnight "moon"})
     (funcall test-fn '(:hello "world" :goodnight "moon"))
+    (funcall test-fn (fset:map (:hello "world") (:goodnight "moon")))
     (funcall test-fn '((:hello . "world") (:goodnight ."moon")))))
 
 (test nthval-test
