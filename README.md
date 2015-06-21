@@ -4,7 +4,7 @@ Modular collection of utilities for common lisp, evolved from my personal standa
 Highlights:
 - a common interface for mapping types
 - map literal syntax
-- clojure-style threading macros
+- clojure-style threading macro
 
 (+ other miscellany)
 
