@@ -97,7 +97,8 @@ Examples:
   (enable-inner do-push
    (set-dispatch-macro-character #\# #\! #'shell-command-reader)
    (set-dispatch-macro-character #\# #\M #'map-literal-reader)
-   (set-dispatch-macro-character #\# #\? #'cl-interpol::interpol-reader)))
+   (set-dispatch-macro-character #\# #\? #'cl-interpol::interpol-reader))
+  (values))
 
 (defmacro pop-reader-exts ()
   `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -107,9 +108,11 @@ Examples:
 (defmacro enable-map-literals (&key (do-push t))
   "Enable only the map literal reader."
   (enable-inner do-push
-   (set-dispatch-macro-character #\# #\M #'map-literal-reader)))
+   (set-dispatch-macro-character #\# #\M #'map-literal-reader))
+  (values))
 
 (defmacro enable-shell-command-literals (&key (do-push t))
   "Enable only the shell command reader."
   (enable-inner do-push
-   (set-dispatch-macro-character #\# #\! #'shell-command-reader)))
+   (set-dispatch-macro-character #\# #\! #'shell-command-reader)
+   (values)))
