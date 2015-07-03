@@ -16,7 +16,7 @@ identity function.)
   (terpri))
 
 (defun slurp (fn &key (lines nil))
-  "Slurp a file into a strng.
+  "Slurp a file into a string.
 
 If lines is non-nil, return a list, one string per line (newlines stripped)."
   (with-open-file (f fn)

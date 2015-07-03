@@ -2,20 +2,30 @@
 
 (defpackage :col.reader
   (:documentation "Reader extensions.
-The shell command reader uses the syntax #!\"shell-command\" to run the command using inferior-shell and return stdout as a string.  Within the shell command, you can use interpolation syntax as for cl-interpol.
+The shell command reader uses the syntax #!\"shell-command\" to run the command
+using inferior-shell and return stdout as a string.  Within the shell command,
+you can use interpolation syntax as for cl-interpol.
 
-The map literal reader uses the syntax #M(opts-plist){key value key value} to generate mappings.  opts-plist is an optional (you can leave out the parens entirely) list of options controlling the return type of the mapping.  Currently supported options: :type (one of :alist :plist :hash-table), the type of the mapping that's created; :test, when a hash-table, the equality test for that hash table.  Default is an alist.
+The map literal reader uses the syntax #M(opts-plist){key value key value} to
+generate mappings.  opts-plist is an optional (you can leave out the parens
+entirely) list of options controlling the return type of the mapping.
+Currently supported options: :type (one of :alist :plist :hash-table), the type
+of the mapping that's created; :test, when a hash-table, the equality test for
+that hash table.  Default is an alist.
 ")
   (:use :cl :col.mapping)
   (:export
    :enable-map-literals
    :enable-shell-command-literals
    :enable-reader-exts
-   :pop-reader-exts))
+   :pop-reader-exts
+   :*default-map-literal-type*))
 
 (in-package :col.reader)
 
 (defvar *previous-readtables* nil)
+
+(defvar *default-map-literal-type* :alist)
 
 (defun read-terminal-bracket (stream char)
   "Temporary reader for terminal bracket while reading a map literal.
@@ -55,7 +65,7 @@ Examples:
   ; or a { in which case we want to read the elements
   (let ((opts nil)
         (elts nil)
-        (output-type :fset-map)
+        (output-type *default-map-literal-type*)
         (next-char (peek-char nil stream)))
     (when (eq next-char #\()
       (setq opts (read stream t nil t)))

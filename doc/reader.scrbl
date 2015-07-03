@@ -15,14 +15,16 @@ The map literal reader adds a syntax for literals of an arbitrary mapping type:
 of options that specify the result type of the mapping.
 
 @racketgrammar[#:literals (opts-plist option) (opts-plist) (option ...)]
-@racketgrammar[option (code:line :type (one-of/c :alist :plist :hash-table :fset-map))
+@racketgrammar[option (code:line :type (member :alist :plist :hash-table :fset-map))
                       (code:line :test test)]
 
-If no option is specified, the default is @code{:fset-map} (an
-@link["https://common-lisp.net/project/fset/Site/index.html"]{FSet map}, a
-functional, immutable mapping type).
+If no option is specified, the default is @code{*default-map-literal-type*}.
 
 @code{:test} is only used when the output type is @code{:hash-table}
+
+@defthing[#:kind "dynamic var" *default-map-literal-type* keyword #:value :alist]{
+Default map literal type to use when one is not supplied.
+}
 
 @section[#:tag "shell command literals"]{Shell command literals}
 
@@ -40,7 +42,7 @@ Within the string, interpolation using
 
 @section[#:tag "enabling reader syntax"]{Enabling reader syntax}
 
-@defproc[(enable-reader-exts [#:do-push do-push bool/c t])
+@defproc[#:kind "macro" (enable-reader-exts [#:do-push do-push (member t nil) t])
          (void)]{
 Enable the map literal and shell command literal readers.  Also enables
 cl-interpol @code[#:lang "scribble/text"]{#?""} syntax.}
@@ -48,15 +50,15 @@ cl-interpol @code[#:lang "scribble/text"]{#?""} syntax.}
 If @code{do-push} is nil, modify the readtable in place, rather than pushing on
 a copy that can be popped using @code{pop-reader-exts}.
 
-@defproc[(enable-map-literals [#:do-push do-push bool/c t])
+@defproc[#:kind "macro" (enable-map-literals [#:do-push do-push (member t nil) t])
          (void)]{
 Enable only the map literal syntax.}
 
-@defproc[(enable-shell-command-literals [#:do-push do-push bool/c t])
+@defproc[#:kind "macro" (enable-shell-command-literals [#:do-push do-push (member t nil) t])
          (void)]{
 Enable only the shell command literal syntax.}
 
-@defproc[(pop-reader-exts) (void)]{
+@defproc[#:kind "macro" (pop-reader-exts) (void)]{
 Disable the most recently added reader syntax from this package.  (Calls to
 this macro should be matched one-to-one with calls to any of the
-@code{enable-} procedures.)}
+@code{enable-} macros.)}
