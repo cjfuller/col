@@ -87,7 +87,7 @@ The first key corresponds to the outermost layer of mapping."
   (:documentation "Set the value associated with a key in a mapping in-place."))
 
 (defmethod mset! ((obj hash-table) key value)
-  (hset h key value))
+  (hset obj key value))
 
 (defmethod mset! ((obj list) key value)
   ;; Fail if it's not an alist
