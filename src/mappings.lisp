@@ -100,20 +100,22 @@ The first key corresponds to the outermost layer of mapping."
 (defmethod mset! ((obj fset:map) key value)
   (error "FSet maps are immutable."))
 
-(defgeneric mset (obj key value)
+(defgeneric mset (obj key value &optional opts)
   (:documentation "Return a mapping with value associated with key.  Don't modify the original mapping."))
 
-(defmethod mset ((obj list) key value)
-  (if (alist-p obj)
+(defmethod mset ((obj list) key value &optional opts)
+  (if (and (alist-p obj) (not (eql opts :as-plist)))
       (acons key value obj)
       (cons key (cons value obj))))
 
-(defmethod mset ((obj hash-table) key value)
+(defmethod mset ((obj hash-table) key value &optional opts)
+  (declare (ignore opts))
   (let ((newtable (htcopy obj)))
     (hset newtable key value)
     newtable))
 
-(defmethod mset ((obj fset:map) key value)
+(defmethod mset ((obj fset:map) key value &optional opts)
+  (declare (ignore opts))
   (fset:with obj key value))
 
 (defun mset* (obj keylist value)
