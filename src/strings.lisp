@@ -2,7 +2,7 @@
 
 (defpackage :col.strings
   (:use :cl)
-  (:export :->string :<>))
+  (:export :->string :<> :starts-with? :ends-with?))
 
 (in-package :col.strings)
 
