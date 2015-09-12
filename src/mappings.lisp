@@ -18,6 +18,7 @@
    :ht
    :plist->alist
    :alist->ht
+   :alist
    :keys))
 
 (in-package :col.mapping)
@@ -161,5 +162,9 @@ The first key corresponds to the outermost layer of mapping."
         for y in (cdr plist) by #'cddr
         collect (cons x y)))
 
+(defun alist (&rest args)
+  (plist->alist args))
+
 (defun alist->ht (alist &rest hash-table-initargs)
   (apply #'alexandria:alist-hash-table (cons alist hash-table-initargs)))
+
