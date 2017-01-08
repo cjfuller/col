@@ -8,4 +8,4 @@ Highlights:
 
 (+ other miscellany)
 
-[Documentation](http://docs.cjf.io/col/)
+[Documentation](https://cjfuller.github.io/col/)
